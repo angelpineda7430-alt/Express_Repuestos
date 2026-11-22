@@ -1,0 +1,219 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Express Repuestos | Repuestos para Autos y Motos</title>
+    <link rel="stylesheet" href="/tienda/css/estilos.css">
+</head>
+
+<body>
+
+<header class="header">
+    <div class="logo">
+        <span>EXPRESS</span>
+        <strong>REPUESTOS</strong>
+    </div>
+
+    <nav>
+        <a href="#inicio">Inicio</a>
+        <a href="#catalogo">Repuestos</a>
+        <a href="#vehiculo">Mi vehículo</a>
+        <a href="#seguimiento">Seguimiento</a>
+    </nav>
+
+    <button class="cart-button" onclick="abrirCarrito()">
+        🛒 Mi carrito <span id="contador">0</span>
+    </button>
+</header>
+
+<main>
+
+    <section class="hero" id="inicio">
+        <div>
+            <span class="tag">TU TIENDA DE REPUESTOS</span>
+            <h1>Encuentra el repuesto que tu vehículo necesita</h1>
+            <p>Repuestos nuevos y usados para automóviles y motocicletas.</p>
+            <a href="#vehiculo" class="btn-primary">Buscar repuestos</a>
+        </div>
+    </section>
+
+    <section class="container" id="vehiculo">
+        <div class="section-title">
+            <h2>Selecciona tu vehículo</h2>
+            <p>Encuentra piezas compatibles con tu vehículo.</p>
+        </div>
+
+        <div class="vehicle-form">
+
+            <div>
+                <label>Tipo de vehículo</label>
+                <select id="tipo">
+                    <option value="">Seleccionar</option>
+                    <option value="automovil">Automóvil</option>
+                    <option value="motocicleta">Motocicleta</option>
+                </select>
+            </div>
+
+            <div>
+                <label>Marca</label>
+                <select id="marca" disabled>
+                    <option value="">Seleccionar marca</option>
+                </select>
+            </div>
+
+            <div>
+                <label>Modelo</label>
+                <select id="modelo" disabled>
+                    <option value="">Seleccionar modelo</option>
+                </select>
+            </div>
+
+            <div>
+                <label>Año</label>
+                <select id="anio" disabled>
+                    <option value="">Seleccionar año</option>
+                </select>
+            </div>
+
+            <button id="buscar" class="btn-primary" disabled>
+                Buscar
+            </button>
+
+            <button id="limpiar" class="btn-secondary">
+                Limpiar
+            </button>
+
+        </div>
+    </section>
+
+    <section class="container" id="catalogo">
+
+        <div class="section-title">
+            <h2>Nuestros repuestos</h2>
+            <p>Encuentra la pieza que necesitas.</p>
+        </div>
+
+        <div class="filters">
+
+            <select id="categoria">
+                <option value="">Todas las categorías</option>
+            </select>
+
+            <select id="condicion">
+                <option value="">Nuevo y usado</option>
+                <option value="nuevo">Nuevo</option>
+                <option value="usado">Usado</option>
+            </select>
+
+        </div>
+
+        <div id="productos" class="products-grid">
+            <p>Cargando catálogo...</p>
+        </div>
+
+    </section>
+
+    <section class="container tracking" id="seguimiento">
+
+        <div class="section-title">
+            <h2>Seguimiento de pedidos</h2>
+            <p>Consulta el estado de tu compra.</p>
+        </div>
+
+        <div class="tracking-form">
+            <input
+                type="text"
+                id="pedidoConsulta"
+                placeholder="Ejemplo: PED-A1B2C3D4"
+            >
+            <button class="btn-primary" onclick="consultarPedido()">
+                Consultar pedido
+            </button>
+        </div>
+
+        <div id="resultadoPedido"></div>
+
+    </section>
+
+</main>
+
+<!-- MODAL DEL CARRITO -->
+
+<div id="modalCarrito" class="modal">
+
+    <div class="modal-content">
+
+        <button class="close" onclick="cerrarCarrito()">×</button>
+
+        <h2>Mi carrito de compras</h2>
+
+        <div id="contenidoCarrito"></div>
+
+        <div class="cart-total">
+            Total: $<span id="totalCarrito">0.00</span>
+        </div>
+
+        <button class="btn-primary full" onclick="mostrarCheckout()">
+            Continuar compra
+        </button>
+
+    </div>
+
+</div>
+
+<!-- MODAL DE COMPRA -->
+
+<div id="modalCheckout" class="modal">
+
+    <div class="modal-content">
+
+        <button class="close" onclick="cerrarCheckout()">×</button>
+
+        <h2>Finalizar compra</h2>
+
+        <form id="formPedido">
+
+            <label>Nombre completo</label>
+            <input id="nombreCliente" required minlength="3">
+
+            <label>Celular</label>
+            <input id="celular" type="tel" required minlength="8">
+
+            <label>Documento de identificación</label>
+            <input id="documento" required minlength="5">
+
+            <label>Modalidad de entrega</label>
+            <select id="modalidad" required>
+                <option value="sucursal">Retiro en sucursal</option>
+                <option value="domicilio">Entrega a domicilio</option>
+            </select>
+
+            <div id="campoDireccion" hidden>
+                <label>Dirección de entrega</label>
+                <textarea id="direccion"></textarea>
+            </div>
+
+            <button type="submit" class="btn-primary full">
+                Confirmar pedido
+            </button>
+
+        </form>
+
+        <div id="resultadoCompra"></div>
+
+    </div>
+
+</div>
+
+<footer>
+    <h3>EXPRESS REPUESTOS</h3>
+    <p>Tu mejor opción en repuestos para automóviles y motocicletas.</p>
+    <p>© 2026 Express Repuestos</p>
+</footer>
+
+<script src="/tienda/js/app.js"></script>
+
+</body>
+</html>
