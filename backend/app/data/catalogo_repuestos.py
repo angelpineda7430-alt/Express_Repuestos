@@ -38,7 +38,7 @@ CATALOGO_REPUESTOS = [
         "anio_desde": 2015,
         "anio_hasta": 2022,
         "existencia": 8,
-        "imagen": "/images/disco_freno.jpg"
+        "imagen": "/images/disco_freno_toyota.jpg"
     },
 
     {
@@ -55,7 +55,7 @@ CATALOGO_REPUESTOS = [
         "anio_desde": 2015,
         "anio_hasta": 2022,
         "existencia": 5,
-        "imagen": "/images/radiador.jpg"
+        "imagen": "/images/radiador_toyota.jpg"
     },
 
     # ======================================
@@ -76,7 +76,7 @@ CATALOGO_REPUESTOS = [
         "anio_desde": 2013,
         "anio_hasta": 2019,
         "existencia": 2,
-        "imagen": "/images/alternador.jpg"
+        "imagen": "/images/alternador_nissan.jpg"
     },
 
     {
@@ -93,7 +93,7 @@ CATALOGO_REPUESTOS = [
         "anio_desde": 2013,
         "anio_hasta": 2019,
         "existencia": 6,
-        "imagen": "/images/bomba_agua.jpg"
+        "imagen": "/images/bomba_agua_nissan.jpg"
     },
 
     # ======================================
@@ -114,7 +114,7 @@ CATALOGO_REPUESTOS = [
         "anio_desde": 2018,
         "anio_hasta": 2025,
         "existencia": 10,
-        "imagen": "/images/pastillas_honda.jpg"
+        "imagen": "/images/pastillas_freno_honda.jpg"
     },
 
     {
@@ -131,7 +131,7 @@ CATALOGO_REPUESTOS = [
         "anio_desde": 2018,
         "anio_hasta": 2025,
         "existencia": 3,
-        "imagen": "/images/bateria_moto.jpg"
+        "imagen": "/images/bateria_honda.jpg"
     },
 
     # ======================================
@@ -152,6 +152,6 @@ CATALOGO_REPUESTOS = [
         "anio_desde": 2017,
         "anio_hasta": 2025,
         "existencia": 7,
-        "imagen": "/images/kit_arrastre.jpg"
+        "imagen": "/images/kit_arrastre_yamaha.jpg"
     }
 ]
