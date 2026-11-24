@@ -6,6 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Express Repuestos | Repuestos para Autos y Motos</title>
     <link rel="stylesheet" href="/tienda/css/estilos.css">
+    <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
 </head>
 
 <body>
@@ -22,10 +26,17 @@
         <a href="#vehiculo">Mi vehículo</a>
         <a href="#seguimiento">Seguimiento</a>
     </nav>
+    <div class="header-actions">
+        <div id="clerk-auth">
+            <button class="btn-login" onclick="abrirAcceso()">
+                Iniciar sesión
+            </button>
+        </div>
 
-    <button class="cart-button" onclick="abrirCarrito()">
-        🛒 Mi carrito <span id="contador">0</span>
-    </button>
+        <button class="cart-button" onclick="abrirCarrito()">
+            🛒 Mi carrito <span id="contador">0</span>
+        </button>
+    </div>
 </header>
 
 <main>
@@ -189,11 +200,54 @@
                 <option value="sucursal">Retiro en sucursal</option>
                 <option value="domicilio">Entrega a domicilio</option>
             </select>
+  
+<label>Método de pago</label>
+<select id="metodoPago" required>
+    <option value="efectivo">Efectivo</option>
+    <option value="tarjeta">Tarjeta de crédito o débito</option>
+</select>
 
-            <div id="campoDireccion" hidden>
-                <label>Dirección de entrega</label>
-                <textarea id="direccion"></textarea>
-            </div>
+<div id="informacionPago" class="payment-info">
+    <p id="mensajePago">
+        Pagarás en efectivo al momento de retirar o recibir tu pedido.
+    </p>
+</div>
+
+<div id="paypal-container" hidden>
+    <p>Completa tu pago de forma segura con PayPal.</p>
+    <div id="paypal-button-container"></div>
+</div>
+
+            
+<div id="campoDireccion" hidden>
+
+    <label>Dirección de entrega</label>
+    <textarea
+        id="direccion"
+        placeholder="Colonia, calle, número de casa..."
+    ></textarea>
+
+    <label>Referencia para encontrar el domicilio</label>
+    <textarea
+        id="referencia"
+        placeholder="Frente a una tienda, portón de color..."
+    ></textarea>
+
+    <label>Selecciona tu ubicación en el mapa</label>
+
+    <p>Haz clic en el mapa para marcar el lugar donde deseas recibir tu pedido.</p>
+
+    <div id="mapaEntrega" style="height: 350px; width: 100%; border-radius: 10px;"></div>
+
+    <input type="hidden" id="latitud">
+    <input type="hidden" id="longitud">
+
+    <p id="coordenadasSeleccionadas">
+        Aún no has seleccionado una ubicación.
+    </p>
+
+</div>
+
 
             <button type="submit" class="btn-primary full">
                 Confirmar pedido
@@ -228,21 +282,36 @@
 </script>
 <!-- Inicializar Clerk -->
 <script>
+   
+window.clerkReady = new Promise(resolve => {
     window.addEventListener("load", async function () {
         try {
             await Clerk.load({
-                ui: {
-                    ClerkUI: window.__internal_ClerkUICtor
-                }
+                ui: { ClerkUI: window.__internal_ClerkUICtor },
+                signInFallbackRedirectUrl: "/tienda/",
+                signUpFallbackRedirectUrl: "/tienda/",
+                afterSignOutUrl: "/tienda/"
             });
 
             console.log("Clerk cargado correctamente");
+            resolve(Clerk);
 
         } catch (error) {
             console.error("Error al inicializar Clerk:", error);
+            resolve(null);
         }
     });
+});
+
 </script>
+<script
+    src="https://www.paypal.com/sdk/js?client-id=BAACD8IF3ayY3auEX6LhkIBpeE1hFxzDb4h9nkPsLw7spfZ3BgTWWiDJWT0fLmN-L27Tx5j2yX8YUS7Sl4&currency=USD&intent=capture&components=buttons"
+    defer>
+</script>
+<script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+</script>
+
 <script src="/tienda/js/app.js"></script>
 
 </body>

@@ -6,16 +6,90 @@ let carritoActual = null;
 let vehiculoSeleccionado = null;
 
 // ========================================
+// AUTENTICACIÓN DE CLIENTES - CLERK
+// ========================================
+
+let usuarioAutenticado = null;
+
+function abrirAcceso() {
+    if (window.Clerk && !window.Clerk.isSignedIn) {
+        window.Clerk.openSignIn();
+    }
+}
+
+async function configurarAutenticacion() {
+
+    const clerk = await window.clerkReady;
+
+    if (!clerk) {
+        console.error("No se pudo inicializar Clerk");
+        return;
+    }
+
+    const contenedor = document.getElementById("clerk-auth");
+
+    function actualizarUsuario() {
+
+        if (clerk.isSignedIn && clerk.user) {
+
+            usuarioAutenticado = clerk.user;
+
+            contenedor.innerHTML = '<div id="clerk-user-button"></div>';
+
+            clerk.mountUserButton(document.getElementById("clerk-user-button"), {
+    afterSignOutUrl: "/tienda/"
+});
+
+            console.log(
+                "Cliente autenticado:",
+                usuarioAutenticado.primaryEmailAddress?.emailAddress
+            );
+
+        } else {
+
+            usuarioAutenticado = null;
+
+            contenedor.innerHTML = `
+                <button class="btn-login" onclick="abrirAcceso()">
+                    Iniciar sesión
+                </button>
+            `;
+        }
+    }
+
+    actualizarUsuario();
+
+    clerk.addListener(() => {
+        actualizarUsuario();
+    });
+}
+
+configurarAutenticacion();
+
+// ========================================
 // FUNCIONES GENERALES
 // ========================================
 
+
 async function solicitar(url, opciones = {}) {
 
+    const headers = {
+        "Content-Type": "application/json",
+        ...(opciones.headers || {})
+    };
+
+    // Obtener el token de autenticación de Clerk
+    if (window.Clerk && window.Clerk.session) {
+        const token = await window.Clerk.session.getToken();
+
+        if (token) {
+            headers["Authorization"] = `Bearer ${token}`;
+        }
+    }
+
     const respuesta = await fetch(url, {
-        headers: {
-            "Content-Type": "application/json"
-        },
-        ...opciones
+        ...opciones,
+        headers
     });
 
     const datos = await respuesta.json();
@@ -26,6 +100,7 @@ async function solicitar(url, opciones = {}) {
 
     return datos;
 }
+
 
 function mostrarError(error) {
     alert(error.message || "Ocurrió un error");
@@ -496,6 +571,17 @@ async function mostrarCheckout() {
             return;
         }
 
+        // Verificar que el cliente haya iniciado sesión
+        if (!window.Clerk || !window.Clerk.isSignedIn) {
+
+            alert("Para continuar con tu compra debes iniciar sesión.");
+
+            window.Clerk?.openSignIn();
+
+            return;
+        }
+
+        // El cliente está autenticado
         cerrarCarrito();
 
         document.getElementById("modalCheckout").style.display = "flex";
@@ -515,6 +601,36 @@ function cerrarCheckout() {
 
 // Mostrar u ocultar dirección
 
+
+// Mostrar información según el método de pago
+document.getElementById("metodoPago").addEventListener("change", e => {
+
+    const metodo = e.target.value;
+    const mensaje = document.getElementById("mensajePago");
+    const contenedorPayPal = document.getElementById("paypal-container");
+    const botonesPayPal = document.getElementById("paypal-button-container");
+
+    if (metodo === "efectivo") {
+
+        mensaje.textContent =
+            "Pagarás en efectivo al momento de retirar o recibir tu pedido.";
+
+        // Ocultar PayPal cuando se selecciona efectivo
+        contenedorPayPal.hidden = true;
+        botonesPayPal.innerHTML = "";
+
+        window.pedidoPayPal = null;
+
+    } else {
+
+        mensaje.textContent =
+            "Completa tu pago de forma segura mediante PayPal Sandbox.";
+
+    }
+
+});
+
+
 document.getElementById("modalidad").addEventListener("change", e => {
 
     const campo = document.getElementById("campoDireccion");
@@ -529,7 +645,8 @@ document.getElementById("modalidad").addEventListener("change", e => {
 
 
 
- // Registrar pedido
+ 
+// Registrar pedido
 document.getElementById("formPedido").addEventListener("submit", async e => {
 
     e.preventDefault();
@@ -537,17 +654,89 @@ document.getElementById("formPedido").addEventListener("submit", async e => {
     const botonEnviar = e.submitter;
     if (botonEnviar) botonEnviar.disabled = true;
 
-    const datos = {
-        carrito_id: carritoId,
-        nombre_cliente: document.getElementById("nombreCliente").value,
-        celular: document.getElementById("celular").value,
-        documento: document.getElementById("documento").value,
-        modalidad_entrega: document.getElementById("modalidad").value,
-        direccion: document.getElementById("direccion").value || null
-    };
+    
+const datos = {
+    carrito_id: carritoId,
+    nombre_cliente: document.getElementById("nombreCliente").value,
+    celular: document.getElementById("celular").value,
+    documento: document.getElementById("documento").value,
+    modalidad_entrega: document.getElementById("modalidad").value,
+    metodo_pago: document.getElementById("metodoPago").value,
+    direccion: document.getElementById("direccion").value || null,
+
+    referencia: document.getElementById("referencia").value || null,
+
+    latitud: document.getElementById("latitud").value
+        ? Number(document.getElementById("latitud").value)
+        : null,
+
+    longitud: document.getElementById("longitud").value
+        ? Number(document.getElementById("longitud").value)
+        : null
+};
+
 
     try {
 
+
+        // Validar información de entrega a domicilio
+        if (datos.modalidad_entrega === "domicilio") {
+
+            if (!datos.direccion || !datos.direccion.trim()) {
+                throw new Error(
+                    "Debe ingresar la dirección de entrega."
+                );
+            }
+
+            if (datos.latitud === null || datos.longitud === null) {
+                throw new Error(
+                    "Debe seleccionar la ubicación de entrega en el mapa."
+                );
+            }
+        }
+
+        // Si el cliente seleccionó tarjeta, iniciar PayPal
+        if (datos.metodo_pago === "tarjeta") {
+
+            const resultado = await solicitar(
+                `${API}/pedidos/crear-pago`,
+                {
+                    method: "POST",
+                    body: JSON.stringify(datos)
+                }
+            );
+
+            // Guardar los datos necesarios para continuar el pago
+            window.pedidoPayPal = {
+    pedidoId: resultado.pedido_id,
+    paypalOrderId: resultado.paypal_order_id,
+    total: resultado.total
+};
+
+            // Mostrar el botón de PayPal
+            document.getElementById("paypal-container").hidden = false;
+
+            document.getElementById("resultadoCompra").innerHTML = `
+                <div class="tracking-result">
+                    <h3>Pedido preparado</h3>
+                    <p>Número de pedido:
+                        <strong>${resultado.pedido_id}</strong>
+                    </p>
+                    <p>Total: $${Number(resultado.total).toFixed(2)}</p>
+                    <p>Completa el pago utilizando PayPal.</p>
+                </div>
+            `;
+
+            // Evitar que el cliente vuelva a enviar el formulario
+            if (botonEnviar) botonEnviar.disabled = false;
+
+            // Dibujar los botones de PayPal
+            mostrarBotonesPayPal();
+
+            return;
+        }
+
+        // Pago en efectivo: conservar el proceso actual
         const pedido = await solicitar(
             `${API}/pedidos/`,
             {
@@ -556,7 +745,6 @@ document.getElementById("formPedido").addEventListener("submit", async e => {
             }
         );
 
-        // Mostrar confirmación dentro del formulario
         document.getElementById("resultadoCompra").innerHTML = `
             <div class="tracking-result">
                 <h3>¡Pedido registrado correctamente!</h3>
@@ -568,17 +756,13 @@ document.getElementById("formPedido").addEventListener("submit", async e => {
             </div>
         `;
 
-        // Preparar el seguimiento con el número generado
         document.getElementById("pedidoConsulta").value = pedido.pedido_id;
 
-        // Actualizar el carrito
         document.getElementById("contador").textContent = "0";
         carritoActual = null;
 
-        // Limpiar el formulario
         document.getElementById("formPedido").reset();
 
-        // Informar al cliente del número de seguimiento
         alert(
             "¡Compra realizada correctamente!\n\n" +
             "Número de seguimiento: " + pedido.pedido_id +
@@ -586,7 +770,6 @@ document.getElementById("formPedido").addEventListener("submit", async e => {
             "\n\nEl número ya está colocado en el formulario de seguimiento."
         );
 
-        // Cerrar la ventana de compra
         cerrarCheckout();
 
     } catch (error) {
@@ -601,6 +784,84 @@ document.getElementById("formPedido").addEventListener("submit", async e => {
 
 });
 
+
+// Mostrar botones de PayPal
+function mostrarBotonesPayPal() {
+
+    const contenedor = document.getElementById("paypal-button-container");
+
+    // Evitar dibujar los botones varias veces
+    contenedor.innerHTML = "";
+
+    if (!window.paypal || !window.pedidoPayPal) {
+        mostrarError(new Error("PayPal todavía no está disponible."));
+        return;
+    }
+
+    paypal.Buttons({
+
+        createOrder: function () {
+            return window.pedidoPayPal.paypalOrderId;
+        },
+
+        onApprove: async function (data) {
+
+            try {
+
+                const pedido = await solicitar(
+                    `${API}/pedidos/${window.pedidoPayPal.pedidoId}/capturar-pago`,
+                    {
+                        method: "POST",
+                        body: JSON.stringify({})
+                    }
+                );
+
+                document.getElementById("resultadoCompra").innerHTML = `
+                    <div class="tracking-result">
+                        <h3>¡Pago realizado correctamente!</h3>
+                        <p>Número de pedido:
+                            <strong>${pedido.pedido_id}</strong>
+                        </p>
+                        <p>Total pagado: $${Number(pedido.total).toFixed(2)}</p>
+                        <p>Estado del pago: ${pedido.estado_pago}</p>
+                    </div>
+                `;
+
+                document.getElementById("pedidoConsulta").value = pedido.pedido_id;
+                document.getElementById("contador").textContent = "0";
+
+                carritoActual = null;
+                window.pedidoPayPal = null;
+
+                document.getElementById("paypal-container").hidden = true;
+
+                alert(
+                    "¡Pago confirmado!\nNúmero de pedido: " +
+                    pedido.pedido_id
+                );
+
+                cerrarCheckout();
+
+            } catch (error) {
+
+                mostrarError(error);
+
+            }
+        },
+
+        onCancel: function () {
+            alert(
+                "El pago fue cancelado. Tu pedido permanece pendiente de pago."
+            );
+        },
+
+        onError: function (error) {
+            console.error("Error de PayPal:", error);
+            mostrarError(new Error("Ocurrió un problema con PayPal."));
+        }
+
+    }).render("#paypal-button-container");
+}
 
 
 // ========================================
@@ -624,25 +885,35 @@ async function consultarPedido() {
             `${API}/pedidos/${encodeURIComponent(pedidoId)}`
         );
 
-        resultado.innerHTML = `
-            <div class="tracking-result">
-                <h3>Pedido ${pedido.pedido_id}</h3>
-                <p>Cliente: ${pedido.cliente.nombre}</p>
-                <p>Estado actual: <strong>${pedido.estado}</strong></p>
-                <p>Modalidad: ${pedido.modalidad_entrega}</p>
-                <p>Total: $${Number(pedido.total).toFixed(2)}</p>
-                <h4>Historial del pedido</h4>
-                <ul>
-                    ${pedido.historial.map(item => `
-                        <li>
-                            <strong>${item.estado}</strong>
-                            <br>${new Date(item.fecha).toLocaleString("es-SV")}
-                            <br>${item.observacion}
-                        </li>
-                    `).join("")}
-                </ul>
-            </div>
-        `;
+        
+resultado.innerHTML = `
+    <div class="tracking-result">
+        <h3>Pedido ${pedido.pedido_id}</h3>
+        <p>Cliente: ${pedido.cliente.nombre}</p>
+        <p>Estado actual: <strong>${pedido.estado}</strong></p>
+        <p>Modalidad: ${pedido.modalidad_entrega}</p>
+        <p>Método de pago: <strong>${
+            pedido.metodo_pago === "efectivo" ? "Efectivo" : "Tarjeta"
+        }</strong></p>
+        <p>Estado del pago: <strong>${
+            pedido.estado_pago === "pendiente" ? "Pendiente de pago" :
+            pedido.estado_pago === "aprobado" ? "Pagado" :
+            "Pago rechazado"
+        }</strong></p>
+        <p>Total: $${Number(pedido.total).toFixed(2)}</p>
+
+        <h4>Historial del pedido</h4>
+        <ul>
+            ${pedido.historial.map(item => `
+                <li>
+                    <strong>${item.estado}</strong>
+                    <br>${new Date(item.fecha).toLocaleString("es-SV")}
+                    <br>${item.observacion}
+                </li>
+            `).join("")}
+        </ul>
+    </div>
+`;
 
     } catch (error) {
 
@@ -665,3 +936,108 @@ async function iniciarTienda() {
 }
 
 iniciarTienda();
+
+
+// ==========================================
+// MAPA DE UBICACIÓN PARA ENTREGA A DOMICILIO
+// ==========================================
+
+let mapaEntrega = null;
+let marcadorEntrega = null;
+
+// Mostrar mapa y permitir seleccionar ubicación
+function inicializarMapaEntrega() {
+
+    const contenedor = document.getElementById("mapaEntrega");
+
+    if (!contenedor || !window.L) {
+        console.error("No se pudo cargar Leaflet.");
+        return;
+    }
+
+    // Evitar crear el mapa varias veces
+    if (mapaEntrega) {
+        mapaEntrega.invalidateSize();
+        return;
+    }
+
+    // Coordenadas iniciales: San Salvador
+    const ubicacionInicial = [13.6929, -89.2182];
+
+    mapaEntrega = L.map("mapaEntrega").setView(
+        ubicacionInicial,
+        13
+    );
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(mapaEntrega);
+
+    // Seleccionar ubicación haciendo clic
+    mapaEntrega.on("click", function(e) {
+        seleccionarUbicacion(e.latlng.lat, e.latlng.lng);
+    });
+
+}
+
+// Guardar coordenadas y colocar marcador
+function seleccionarUbicacion(latitud, longitud) {
+
+    const posicion = [latitud, longitud];
+
+    if (marcadorEntrega) {
+        marcadorEntrega.setLatLng(posicion);
+    } else {
+        marcadorEntrega = L.marker(posicion, {
+            draggable: true
+        }).addTo(mapaEntrega);
+
+        // Permitir mover el marcador
+        marcadorEntrega.on("dragend", function(e) {
+            const nuevaPosicion = e.target.getLatLng();
+
+            guardarCoordenadas(
+                nuevaPosicion.lat,
+                nuevaPosicion.lng
+            );
+        });
+    }
+
+    guardarCoordenadas(latitud, longitud);
+}
+
+// Actualizar campos del formulario
+function guardarCoordenadas(latitud, longitud) {
+
+    document.getElementById("latitud").value = latitud;
+    document.getElementById("longitud").value = longitud;
+
+    document.getElementById("coordenadasSeleccionadas").textContent =
+        "Ubicación seleccionada: " +
+        latitud.toFixed(6) + ", " +
+        longitud.toFixed(6);
+}
+
+// Detectar cuando se selecciona entrega a domicilio
+document.getElementById("modalidad").addEventListener("change", function(e) {
+
+    const campoDireccion = document.getElementById("campoDireccion");
+
+    if (e.target.value === "domicilio") {
+
+        campoDireccion.hidden = false;
+
+        setTimeout(function() {
+            inicializarMapaEntrega();
+            if (mapaEntrega) {
+                mapaEntrega.invalidateSize();
+            }
+        }, 200);
+
+    } else {
+
+        campoDireccion.hidden = true;
+
+    }
+
+});

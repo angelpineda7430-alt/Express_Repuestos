@@ -4,6 +4,9 @@ venv/
 .venv/
 backend/venv/
 
+# Variables de entorno y claves
+.env
+
 # Python
 __pycache__/
 *.py[cod]

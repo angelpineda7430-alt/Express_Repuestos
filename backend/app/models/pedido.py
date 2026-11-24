@@ -15,9 +15,28 @@ class CrearPedido(BaseModel):
 
     modalidad_entrega: Literal["sucursal", "domicilio"]
 
+    metodo_pago: Literal["efectivo", "tarjeta"]
+
     direccion: Optional[str] = Field(
         default=None,
         max_length=300
+    )
+
+    referencia: Optional[str] = Field(
+        default=None,
+        max_length=300
+    )
+
+    latitud: Optional[float] = Field(
+        default=None,
+        ge=-90,
+        le=90
+    )
+
+    longitud: Optional[float] = Field(
+        default=None,
+        ge=-180,
+        le=180
     )
 
 
