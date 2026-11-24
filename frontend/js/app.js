@@ -71,6 +71,7 @@ configurarAutenticacion();
 // ========================================
 
 
+
 async function solicitar(url, opciones = {}) {
 
     const headers = {
@@ -78,9 +79,13 @@ async function solicitar(url, opciones = {}) {
         ...(opciones.headers || {})
     };
 
-    // Obtener el token de autenticación de Clerk
-    if (window.Clerk && window.Clerk.session) {
-        const token = await window.Clerk.session.getToken();
+    // Obtener la instancia inicializada de Clerk
+    const clerk = await window.clerkReady;
+
+    // Obtener el token de la sesión activa
+    if (clerk && clerk.session) {
+
+        const token = await clerk.session.getToken();
 
         if (token) {
             headers["Authorization"] = `Bearer ${token}`;
@@ -560,6 +565,7 @@ async function quitarDelCarrito(repuestoId) {
 // FINALIZAR COMPRA
 // ========================================
 
+
 async function mostrarCheckout() {
 
     try {
@@ -571,12 +577,15 @@ async function mostrarCheckout() {
             return;
         }
 
-        // Verificar que el cliente haya iniciado sesión
-        if (!window.Clerk || !window.Clerk.isSignedIn) {
+        // Obtener la instancia inicializada de Clerk
+        const clerk = await window.clerkReady;
+
+        // Verificar la sesión del usuario
+        if (!clerk || !clerk.isSignedIn || !clerk.session) {
 
             alert("Para continuar con tu compra debes iniciar sesión.");
 
-            window.Clerk?.openSignIn();
+            clerk?.openSignIn();
 
             return;
         }
